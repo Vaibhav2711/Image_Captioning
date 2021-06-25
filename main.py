@@ -1,4 +1,22 @@
 from caption import image_cap
+from fastapi import FastAPI
+from typing import Optional
+from pydantic import BaseModel
 
-cap = image_cap('img/objects.jpeg','../BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar','../WORDMAP_coco_5_cap_per_img_5_min_word_freq.json',5)
-print(cap)
+app = FastAPI()
+
+class ImageInput(BaseModel):
+	imagepath : str
+
+class CaptionOut(BaseModel):
+	caption: str
+
+
+@app.post("/caption",response_model = CaptionOut)
+
+async def image_Caption(payload: ImageInput):
+
+	imagepath = payload.imagepath
+	final_caption = image_cap(imagepath)
+	responseObj = {"caption": final_caption}
+	return responseObj
