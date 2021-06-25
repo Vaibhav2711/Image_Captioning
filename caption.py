@@ -191,21 +191,21 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
     #plt.show()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Show, Attend, and Tell - Tutorial - Generate Caption')
+def image_cap(img_path,model_path,word_map,beam_size):
+    #parser = argparse.ArgumentParser(description='Show, Attend, and Tell - Tutorial - Generate Caption')
 
-    parser.add_argument('--img', '-i', help='path to image')
-    parser.add_argument('--model', '-m', help='path to model')
-    parser.add_argument('--word_map', '-wm', help='path to word map JSON')
-    parser.add_argument('--beam_size', '-b', default=5, type=int, help='beam size for beam search')
-    parser.add_argument('--dont_smooth', dest='smooth', action='store_false', help='do not smooth alpha overlay')
+    #parser.add_argument('--img', '-i', help='path to image')
+    #parser.add_argument('--model', '-m', help='path to model')
+    #parser.add_argument('--word_map', '-wm', help='path to word map JSON')
+    #parser.add_argument('--beam_size', '-b', default=5, type=int, help='beam size for beam search')
+    #parser.add_argument('--dont_smooth', dest='smooth', action='store_false', help='do not smooth alpha overlay')
 
-    args = parser.parse_args()
+    #args = parser.parse_args()
 
     # Load model
-    print(torch.cuda.is_available())
-    print(device)
-    checkpoint = torch.load(args.model)
+    #print(torch.cuda.is_available())
+    #print(device)
+    checkpoint = torch.load(model_path)
     #print(checkpoint.is_cuda)
     decoder = checkpoint['decoder']
     decoder = decoder.to(device)
@@ -215,17 +215,18 @@ if __name__ == '__main__':
     encoder.eval()
 
     # Load word map (word2ix)
-    with open(args.word_map, 'r') as j:
+    with open(word_map, 'r') as j:
         word_map = json.load(j)
     rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
 
     # Encode, decode with attention and beam search
-    seq, alphas = caption_image_beam_search(encoder, decoder, args.img, word_map, args.beam_size)
+    seq, alphas = caption_image_beam_search(encoder, decoder, img_path, word_map, beam_size)
     alphas = torch.FloatTensor(alphas)
     words = [rev_word_map[ind] for ind in seq]
     length = len(words)
     words = words[1:length-1]
 
     # Visualize caption and attention of best sequence
-    visualize_att(args.img, seq, alphas, rev_word_map, args.smooth)
-    print(' '.join(word for word in words))
+    visualize_att(img_path, seq, alphas, rev_word_map, smooth = False)
+    caption = ' '.join(word for word in words)
+    return caption
