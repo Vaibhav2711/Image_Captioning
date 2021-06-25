@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -36,11 +38,14 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
     img = imresize(img, (256, 256))
     img = img.transpose(2, 0, 1)
     img = img / 255.
-    img = torch.FloatTensor(img).to(device)
+    img = torch.FloatTensor(img)
+    print(type(img))
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
+    
     transform = transforms.Compose([normalize])
-    image = transform(img)  # (3, 256, 256)
+    image = transform(img).to(device)  # (3, 256, 256)
+    
 
     # Encode
     image = image.unsqueeze(0)  # (1, 3, 256, 256)
@@ -108,8 +113,8 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
         next_word_inds = top_k_words % vocab_size  # (s)
 
         # Add new words to sequences, alphas
-        seqs = torch.cat([seqs[prev_word_inds], next_word_inds.unsqueeze(1)], dim=1)  # (s, step+1)
-        seqs_alpha = torch.cat([seqs_alpha[prev_word_inds], alpha[prev_word_inds].unsqueeze(1)],
+        seqs = torch.cat([seqs[prev_word_inds.long()], next_word_inds.unsqueeze(1)], dim=1)  # (s, step+1)
+        seqs_alpha = torch.cat([seqs_alpha[prev_word_inds.long()], alpha[prev_word_inds.long()].unsqueeze(1)],
                                dim=1)  # (s, step+1, enc_image_size, enc_image_size)
 
         # Which sequences are incomplete (didn't reach <end>)?
@@ -129,9 +134,9 @@ def caption_image_beam_search(encoder, decoder, image_path, word_map, beam_size=
             break
         seqs = seqs[incomplete_inds]
         seqs_alpha = seqs_alpha[incomplete_inds]
-        h = h[prev_word_inds[incomplete_inds]]
-        c = c[prev_word_inds[incomplete_inds]]
-        encoder_out = encoder_out[prev_word_inds[incomplete_inds]]
+        h = h[prev_word_inds[incomplete_inds].long()]
+        c = c[prev_word_inds[incomplete_inds].long()]
+        encoder_out = encoder_out[prev_word_inds[incomplete_inds].long()]
         top_k_scores = top_k_scores[incomplete_inds].unsqueeze(1)
         k_prev_words = next_word_inds[incomplete_inds].unsqueeze(1)
 
@@ -182,7 +187,8 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
             plt.imshow(alpha, alpha=0.8)
         plt.set_cmap(cm.Greys_r)
         plt.axis('off')
-    plt.show()
+        plt.savefig("attention.png")
+    #plt.show()
 
 
 if __name__ == '__main__':
@@ -197,7 +203,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Load model
-    checkpoint = torch.load(args.model, map_location=str(device))
+    print(torch.cuda.is_available())
+    print(device)
+    checkpoint = torch.load(args.model)
+    #print(checkpoint.is_cuda)
     decoder = checkpoint['decoder']
     decoder = decoder.to(device)
     decoder.eval()
@@ -213,6 +222,10 @@ if __name__ == '__main__':
     # Encode, decode with attention and beam search
     seq, alphas = caption_image_beam_search(encoder, decoder, args.img, word_map, args.beam_size)
     alphas = torch.FloatTensor(alphas)
+    words = [rev_word_map[ind] for ind in seq]
+    length = len(words)
+    words = words[1:length-1]
 
     # Visualize caption and attention of best sequence
     visualize_att(args.img, seq, alphas, rev_word_map, args.smooth)
+    print(' '.join(word for word in words))
