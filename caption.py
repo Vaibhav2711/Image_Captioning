@@ -191,7 +191,7 @@ def visualize_att(image_path, seq, alphas, rev_word_map, smooth=True):
     #plt.show()
 
 
-def image_cap(img_path,model_path,word_map,beam_size):
+def image_cap(img_path,model_path = "../BEST_checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar",word_map = "../WORDMAP_coco_5_cap_per_img_5_min_word_freq.json",beam_size = 5):
     #parser = argparse.ArgumentParser(description='Show, Attend, and Tell - Tutorial - Generate Caption')
 
     #parser.add_argument('--img', '-i', help='path to image')
@@ -227,6 +227,6 @@ def image_cap(img_path,model_path,word_map,beam_size):
     words = words[1:length-1]
 
     # Visualize caption and attention of best sequence
-    visualize_att(img_path, seq, alphas, rev_word_map, smooth = False)
+    #visualize_att(img_path, seq, alphas, rev_word_map, smooth = False)
     caption = ' '.join(word for word in words)
     return caption
